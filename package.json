@@ -4,10 +4,13 @@
   "version": "0.0.1",
   "description": "ai based chrome_extension for upwork",
   "author": "Tebita",
+  "type": "module",
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
-    "package": "plasmo package"
+    "package": "plasmo package",
+    "lint": "eslint . --ext .ts,.tsx"
+
   },
   "dependencies": {
     "plasmo": "0.90.5",
@@ -20,6 +23,8 @@
     "@types/node": "20.11.5",
     "@types/react": "18.2.48",
     "@types/react-dom": "18.2.18",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^14.1.0",
     "prettier": "3.2.4",
     "typescript": "5.3.3"
   },
