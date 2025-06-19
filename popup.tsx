@@ -15,12 +15,13 @@ export default function Popup() {
 
   if (user) {
     return (
-      <div className="auth-form" style={{ textAlign: "center", minWidth: "350px", maxWidth: "420px", width: "100%" }}>
-        <p style={{ marginBottom: "1.5rem", fontSize: "1.1rem" }}>
-          👋 Welcome, {user.email}
+      <div className="flex flex-col items-center justify-center min-w-[350px] max-w-[720px] w-full bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-2xl p-8">
+        <p className="mb-6 text-lg font-semibold text-blue-900 flex items-center gap-2">
+          <span className="text-2xl">👋</span> Welcome,{" "}
+          <span className="font-bold">{user.email}</span>
         </p>
         <button
-          className="btn-warning"
+          className="w-full py-3 rounded-lg text-lg font-semibold cursor-pointer transition bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white shadow-lg"
           onClick={async () => {
             await signOut()
             setUser(null)
@@ -34,7 +35,7 @@ export default function Popup() {
   }
 
   return (
-    <div className="auth-form" style={{ minWidth: "350px", maxWidth: "420px", width: "100%" }}>
+    <div className="flex flex-col items-center justify-center min-w-[350px] max-w-[420px] w-full bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-2xl p-8">
       {mode === "login" && (
         <Login onSwitch={setMode} onLoggedIn={setUser} />
       )}
