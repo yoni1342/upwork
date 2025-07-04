@@ -50,10 +50,7 @@ async function scrapeAndLogProfile() {
       document.querySelectorAll('ul.d-flex.list-unstyled.flex-wrap-wrap.mb-0.air3-token-wrap li .skill-name')
     ).map(span => span.textContent.trim())
 
-    
-
-    // Wait for certifications to appear
-    await waitForSelector('div[data-testid="certificate-wrapper"]', 10000)
+    // Certifications (do NOT wait, just try to select)
     const certifications = Array.from(
       document.querySelectorAll('div[data-testid="certificate-wrapper"]')
     ).map(wrapper => {
@@ -66,8 +63,7 @@ async function scrapeAndLogProfile() {
       return cert
     }).filter(Boolean)
 
-    // Wait for work history to appear
-    await waitForSelector('.assignments-item.air3-card-section.py-0.legacy', 10000)
+    // Work history (do NOT wait, just try to select)
     const workHistory = Array.from(
       document.querySelectorAll('.assignments-item.air3-card-section.py-0.legacy')
     ).map(card => {
@@ -86,6 +82,7 @@ async function scrapeAndLogProfile() {
       return { projectTitle, rating, feedback }
     })
 
+    // Experience (do NOT wait, just try to select)
     const experience = Array.from(
       document.querySelectorAll('section.air3-card-section, .air3-card-section.px-0')
     ).map(card => {
