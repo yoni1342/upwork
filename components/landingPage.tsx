@@ -1,6 +1,16 @@
 import React from 'react';
 
-export default function LandingPage({ onNavigate }: { onNavigate: (page: 'login' | 'register') => void }) {
+export default function LandingPage() {
+  const handleLogin = () => {
+    // Open login page in a new tab
+    chrome.tabs.create({ url: chrome.runtime.getURL('/tabs/login.html') });
+  };
+
+  const handleRegister = () => {
+    // Open register page in a new tab
+    chrome.tabs.create({ url: chrome.runtime.getURL('/tabs/register.html') });
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-white rounded-lg shadow-lg overflow-hidden w-full">
       {/* Header with logo and background */}
@@ -19,14 +29,14 @@ export default function LandingPage({ onNavigate }: { onNavigate: (page: 'login'
         <h2 className="text-2xl font-semibold mt-2 mb-6">Hello User</h2>
         <button
           className="w-full bg-[#11443A] text-white py-3 rounded-lg font-medium mb-6 hover:bg-[#0d362e] transition"
-          onClick={() => onNavigate('login')}
+          onClick={handleLogin}
         >
-          Login in Upwex
+          Login in YONI
         </button>
         <p className="text-center text-gray-700 mb-2">Don't have an account?</p>
         <button
           className="w-full border border-[#E5E7EB] text-[#11443A] py-3 rounded-lg font-medium hover:bg-gray-50 transition"
-          onClick={() => onNavigate('register')}
+          onClick={handleRegister}
         >
           Sign Up
         </button>
