@@ -122,3 +122,13 @@ if (document.readyState === "loading") {
 } else {
   scrapeAndLogProfile()
 }
+
+chrome.runtime?.onMessage?.addListener((msg, sender, sendResponse) => {
+  if (msg.type === "shiftPageRight") {
+    document.body.style.transition = "margin-left 0.3s ease"
+    document.body.style.marginLeft = "350px"
+  }
+  if (msg.type === "resetPage") {
+    document.body.style.marginLeft = "0px"
+  }
+})
