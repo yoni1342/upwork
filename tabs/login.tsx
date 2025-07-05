@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react"
 import { Provider } from "react-redux"
 import { useSelector } from "react-redux"
 import { useDispatch } from "react-redux"
-import { checkCurrentUser, hideSidepanel, signInWithEmail } from "../Slice/authSlice"
+import { hideSidepanel } from "../Slice/sidepanelSlice"
+import { checkCurrentUser,  signInWithEmail } from "../Slice/authSlice"
 import type { RootState, AppDispatch } from "../store"
 import { store } from "../store"
 import "../style.css"
@@ -53,14 +54,7 @@ function LoginPageContent() {
     window.location.href = "/tabs/reset-password.html"
   }
 
-  // Optionally, show a loading spinner while checking auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Checking authentication...</div>
-      </div>
-    )
-  }
+ 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">

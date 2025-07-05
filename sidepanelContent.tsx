@@ -16,7 +16,7 @@ export default function SidePanelContent() {
   }, [dispatch])
 
   // Don't render if sidepanel should be hidden or user is authenticated
-  if (showSidepanel) {
+  if (!showSidepanel) {
     return null
   }
 
