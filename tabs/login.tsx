@@ -1,28 +1,48 @@
-import React, { useState } from "react"
-import { signInWithEmail } from "../supabaseAuth"
+import React, { useState, useEffect } from "react"
+import { Provider } from "react-redux"
+import { useSelector } from "react-redux"
+import { useDispatch } from "react-redux"
+import { checkCurrentUser, hideSidepanel, signInWithEmail } from "../Slice/authSlice"
+import type { RootState, AppDispatch } from "../store"
+import { store } from "../store"
 import "../style.css"
 
-function LoginPage() {
+function LoginPageContent() {
+  const dispatch = useDispatch<AppDispatch>()
+  const { isAuthenticated, loading: authLoading, error: authError } = useSelector((state: RootState) => state.auth)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    // Hide sidepanel when on login page
+    dispatch(hideSidepanel())
+    
+    // Check if user is already authenticated
+    dispatch(checkCurrentUser())
+  }, [dispatch])
+
+  useEffect(() => {
+    // Redirect to dashboard if already authenticated and 
+    if (isAuthenticated ) {
+      window.location.replace("/tabs/dashboard.html")
+    }
+  }, [isAuthenticated])
+
 
   const handleLogin = async () => {
     if (!email || !password) {
       setError("Email and password required")
       return
     }
-
     setLoading(true)
-    const { data, error } = await signInWithEmail(email, password)
+    setError("")
+    const resultAction = await dispatch(signInWithEmail({ email, password }) as any)
     setLoading(false)
-
-    if (error) setError(error.message)
-    else {
-      // Redirect to extension popup or close tab
-      window.close()
-    }
+    if (signInWithEmail.rejected.match(resultAction)) {
+      setError(typeof resultAction.payload === "string" ? resultAction.payload : "Login failed")
+    } 
   }
 
   const navigateToRegister = () => {
@@ -31,6 +51,15 @@ function LoginPage() {
 
   const navigateToReset = () => {
     window.location.href = "/tabs/reset-password.html"
+  }
+
+  // Optionally, show a loading spinner while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg text-gray-600">Checking authentication...</div>
+      </div>
+    )
   }
 
   return (
@@ -108,4 +137,10 @@ function LoginPage() {
   )
 }
 
-export default LoginPage 
+export default function LoginPage() {
+  return (
+    <Provider store={store}>
+      <LoginPageContent />
+    </Provider>
+  )
+}

@@ -1,13 +1,35 @@
-import React, { useState } from "react"
-import { signUpWithEmail } from "../supabaseAuth"
+import React, { useState, useEffect } from "react"
+import { Provider } from "react-redux"
+import { useSelector } from "react-redux"
+import { useDispatch } from "react-redux"
+import { checkCurrentUser, hideSidepanel, signUpWithEmail } from "../Slice/authSlice"
+import type { RootState, AppDispatch } from "../store"
+import { store } from "../store"
 import "../style.css"
 
-function RegisterPage() {
+function RegisterPageContent() {
+  const dispatch = useDispatch<AppDispatch>()
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    // Hide sidepanel when on register page
+    dispatch(hideSidepanel())
+    
+    // Check if user is already authenticated
+    dispatch(checkCurrentUser())
+  }, [dispatch])
+
+  useEffect(() => {
+    // Redirect to dashboard if already authenticated
+    if (isAuthenticated) {
+      window.location.href = "/tabs/dashboard.html"
+    }
+  }, [isAuthenticated])
 
   const handleRegister = async () => {
     setError("")
@@ -34,13 +56,15 @@ function RegisterPage() {
     }
 
     setLoading(true)
-    const { data, error } = await signUpWithEmail(email, password)
+    const resultAction = await dispatch(signUpWithEmail({ email, password }) as any)
     setLoading(false)
 
-    if (error) setError(error.message)
-    else {
-      // Redirect to extension popup or close tab
-      window.close()
+    if (signUpWithEmail.rejected.match(resultAction)) {
+      setError(typeof resultAction.payload === "string" ? resultAction.payload : "Registration failed")
+    } else {
+      // Check current user and redirect to dashboard
+      await dispatch(checkCurrentUser())
+      window.location.href = "/tabs/dashboard.html"
     }
   }
 
@@ -130,4 +154,10 @@ function RegisterPage() {
   )
 }
 
-export default RegisterPage 
+export default function RegisterPage() {
+  return (
+    <Provider store={store}>
+      <RegisterPageContent />
+    </Provider>
+  )
+}

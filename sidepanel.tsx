@@ -1,9 +1,12 @@
-import LandingPage from "./components/landingPage"
+import React from "react"
+import { Provider } from "react-redux"
+import { store } from "./store"
+import SidePanelContent from "./sidepanelContent"
 
 export default function SidePanel() {
   return (
-    <div style={{ padding: "1rem" }}>
-      <LandingPage />
-    </div>
+    <Provider store={store}>
+      <SidePanelContent />
+    </Provider>
   )
 }

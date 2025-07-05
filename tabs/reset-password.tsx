@@ -1,8 +1,19 @@
-import React, { useState } from "react"
-import { sendResetEmail } from "../supabaseAuth"
+import React, { useState, useEffect } from "react"
+import { Provider } from "react-redux"
+import { useDispatch } from "react-redux"
+import { sendResetEmail } from "../Slice/authSlice"
+import { hideSidepanel } from "../Slice/authSlice"
+import type { AppDispatch } from "../store"
+import { store } from "../store"
 import "../style.css"
 
-function ResetPasswordPage() {
+function ResetPasswordPageContent() {
+  const dispatch = useDispatch<AppDispatch>()
+
+  useEffect(() => {
+    // Hide sidepanel when on reset password page
+    dispatch(hideSidepanel())
+  }, [dispatch])
   const [email, setEmail] = useState("")
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
@@ -89,4 +100,10 @@ function ResetPasswordPage() {
   )
 }
 
-export default ResetPasswordPage 
+export default function ResetPasswordPage() {
+  return (
+    <Provider store={store}>
+      <ResetPasswordPageContent />
+    </Provider>
+  )
+}
