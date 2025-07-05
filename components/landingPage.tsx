@@ -1,4 +1,5 @@
 import React from 'react';
+import '../style.css'; // Import global styles
 
 export default function LandingPage() {
   const handleLogin = () => {
