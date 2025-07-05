@@ -1,6 +1,16 @@
 import { store } from "./store"
 import { setProfile, sendProfileToSupabase } from "./Slice/profileSlice"
 
+// Handle extension icon click to open sidepanel
+if (typeof chrome !== 'undefined' && chrome.action) {
+  chrome.action.onClicked.addListener((tab) => {
+    // Open the sidepanel when extension icon is clicked
+    if (chrome.sidePanel && chrome.sidePanel.open) {
+      chrome.sidePanel.open({ windowId: tab.windowId })
+    }
+  })
+}
+
 // Listen for messages from content scripts
 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
