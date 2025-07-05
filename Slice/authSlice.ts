@@ -9,8 +9,11 @@ export const checkCurrentUser = createAsyncThunk(
       const { data, error } = await supabase.auth.getUser()
       if (error) throw error
       return data.user
-    } catch (error: any) {
-      return rejectWithValue(error.message || error)
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        return rejectWithValue(error.message)
+      }
+      return rejectWithValue(String(error))
     }
   }
 )
@@ -23,8 +26,11 @@ export const signOutUser = createAsyncThunk(
       const { error } = await supabase.auth.signOut()
       if (error) throw error
       return null
-    } catch (error: any) {
-      return rejectWithValue(error.message || error)
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        return rejectWithValue(error.message)
+      }
+      return rejectWithValue(String(error))
     }
   }
 )
@@ -34,13 +40,16 @@ export const signInWithEmail = createAsyncThunk(
   "auth/signInWithEmail",
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
       // Optionally, fetch user after sign in
       const { data: userData } = await supabase.auth.getUser()
       return userData.user
-    } catch (error: any) {
-      return rejectWithValue(error.message || error)
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        return rejectWithValue(error.message)
+      }
+      return rejectWithValue(String(error))
     }
   }
 )
@@ -53,8 +62,11 @@ export const signUpWithEmail = createAsyncThunk(
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
       return data.user
-    } catch (error: any) {
-      return rejectWithValue(error.message || error)
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        return rejectWithValue(error.message)
+      }
+      return rejectWithValue(String(error))
     }
   }
 )
@@ -69,8 +81,11 @@ export const sendResetEmail = createAsyncThunk(
       })
       if (error) throw error
       return data
-    } catch (error: any) {
-      return rejectWithValue(error.message || error)
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        return rejectWithValue(error.message)
+      }
+      return rejectWithValue(String(error))
     }
   }
 )
@@ -82,21 +97,11 @@ const authSlice = createSlice({
     isAuthenticated: false,
     loading: false,
     error: null,
-    showSidepanel: true, // Default to showing sidepanel
   },
   reducers: {
     setUser: (state, action) => {
       state.user = action.payload
       state.isAuthenticated = !!action.payload
-    },
-    hideSidepanel: (state) => {
-      state.showSidepanel = false
-    },
-    showSidepanel: (state) => {
-      state.showSidepanel = true
-    },
-    toggleSidepanel: (state) => {
-      state.showSidepanel = !state.showSidepanel
     },
   },
   extraReducers: (builder) => {
@@ -109,10 +114,6 @@ const authSlice = createSlice({
         state.loading = false
         state.user = action.payload
         state.isAuthenticated = !!action.payload
-        // Hide sidepanel if user is authenticated
-        if (action.payload) {
-          state.showSidepanel = false
-        }
       })
       .addCase(checkCurrentUser.rejected, (state, action) => {
         state.loading = false
@@ -123,7 +124,6 @@ const authSlice = createSlice({
       .addCase(signOutUser.fulfilled, (state) => {
         state.user = null
         state.isAuthenticated = false
-        state.showSidepanel = true // Show sidepanel after sign out
         state.loading = false
         state.error = null
       })
@@ -146,5 +146,5 @@ const authSlice = createSlice({
   },
 })
 
-export const { setUser, hideSidepanel, showSidepanel, toggleSidepanel } = authSlice.actions
+export const { setUser } = authSlice.actions
 export default authSlice.reducer

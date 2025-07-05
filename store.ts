@@ -2,10 +2,12 @@ import { configureStore } from "@reduxjs/toolkit"
 import { combineReducers } from "redux"
 import profileReducer from "./Slice/profileSlice"
 import authReducer from "./Slice/authSlice"
+import sidepanelReducer from "./Slice/sidepanelSlice"
 
 const rootReducer = combineReducers({
   profile: profileReducer,
   auth: authReducer,
+  sidepanel: sidepanelReducer,
 })
 
 export const store = configureStore({

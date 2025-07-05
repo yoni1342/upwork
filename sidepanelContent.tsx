@@ -6,7 +6,9 @@ import LandingPage from "./components/landingPage"
 
 export default function SidePanelContent() {
   const dispatch = useDispatch<AppDispatch>()
-  const { showSidepanel, isAuthenticated, loading } = useSelector((state: RootState) => state.auth)
+  const showSidepanel = useSelector((state: RootState) => state.sidepanel.showSidepanel)
+  //const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated)
+  const loading = useSelector((state: RootState) => state.auth.loading)
 
   useEffect(() => {
     // Check if user is authenticated on component mount
@@ -14,7 +16,7 @@ export default function SidePanelContent() {
   }, [dispatch])
 
   // Don't render if sidepanel should be hidden or user is authenticated
-  if (!showSidepanel || isAuthenticated) {
+  if (showSidepanel) {
     return null
   }
 
