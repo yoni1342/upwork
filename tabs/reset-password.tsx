@@ -1,103 +1,76 @@
-import React, { useState, useEffect } from "react"
-import { Provider } from "react-redux"
-import { useDispatch } from "react-redux"
-import { sendResetEmail } from "../Slice/authSlice"
-import { hideSidepanel } from "../Slice/sidepanelSlice"
-import type { AppDispatch } from "../store"
-import { store } from "../store"
+import React, { useState, useEffect, useCallback } from "react"
 import "../style.css"
 
 function ResetPasswordPageContent() {
-  const dispatch = useDispatch<AppDispatch>()
-
-  useEffect(() => {
-    // Hide sidepanel when on reset password page
-    dispatch(hideSidepanel())
-  }, [dispatch])
-
   const [email, setEmail] = useState("")
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
   const [loading, setLoading] = useState(false)
+  const [state, setState] = useState<any>(null)
+
+  // Fetch Redux state from background
+  const fetchReduxState = useCallback(() => {
+    chrome.runtime.sendMessage({ type: "REDUX_GET_STATE" }, (response) => {
+      setState(response?.state)
+    })
+  }, [])
+
+  useEffect(() => {
+    fetchReduxState()
+    const listener = (msg: any) => {
+      if (msg.type === "REDUX_STATE_UPDATED") {
+        setState(msg.state)
+      }
+    }
+    chrome.runtime.onMessage.addListener(listener)
+    return () => chrome.runtime.onMessage.removeListener(listener)
+  }, [fetchReduxState])
+
+  useEffect(() => {
+    // Hide sidepanel when on reset password page
+    chrome.runtime.sendMessage({ type: "REDUX_DISPATCH_ACTION", action: { type: "sidepanel/hideSidepanel" } })
+  }, [])
 
   const handleReset = async () => {
     setError("")
     setMessage("")
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       setError("Please enter a valid email.")
       return
     }
-
     setLoading(true)
-    const resultAction = await dispatch(sendResetEmail(email) as any)
-    setLoading(false)
-
-    if (sendResetEmail.rejected.match(resultAction)) {
-      setError(typeof resultAction.payload === "string" ? resultAction.payload : "Reset failed")
-    } else {
+    chrome.runtime.sendMessage({
+      type: "RESET_PASSWORD_REQUEST",
+      payload: { email }
+    }, () => {
+      setLoading(false)
       setMessage("Password reset link sent! Check your email.")
-    }
-  }
-
-  const navigateToLogin = () => {
-    window.location.href = "/tabs/login.html"
+    })
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
-        <div className="text-center mb-8">
-          <img src="/assets/icon.png" alt="Upwex Logo" className="h-12 mx-auto mb-4" />
-          <h2 className="text-3xl font-bold text-gray-900">Reset Password</h2>
-          <p className="text-gray-600 mt-2">Enter your email to receive a reset link</p>
-        </div>
-        
-        <div className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition"
-            />
-          </div>
-          
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-red-600 text-sm text-center">{error}</p>
-            </div>
-          )}
-          
-          {message && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <p className="text-green-600 text-sm text-center">{message}</p>
-            </div>
-          )}
-          
-          <button
-            onClick={handleReset}
-            className="w-full py-3 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
-            disabled={loading}
-          >
-            {loading ? "Sending reset link..." : "Send Reset Link"}
-          </button>
-          
-          <div className="text-center">
-            <button
-              onClick={navigateToLogin}
-              className="text-yellow-700 hover:text-yellow-800 hover:underline text-sm font-medium"
-              type="button"
-            >
-              Back to Sign In
-            </button>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center">
+      <div className="max-w-md w-full bg-white p-8 rounded shadow">
+        <h2 className="text-2xl font-bold mb-6 text-center">Reset Password</h2>
+        {error && <div className="text-red-500 mb-4">{error}</div>}
+        {message && <div className="text-green-600 mb-4">{message}</div>}
+        <input
+          className="w-full p-2 mb-4 border rounded"
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+        />
+        <button
+          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          onClick={handleReset}
+          disabled={loading}
+        >
+          {loading ? "Sending..." : "Send Reset Link"}
+        </button>
+        <div className="mt-4 text-center">
+          <a href="/tabs/login.html" className="text-blue-600 hover:underline">Back to Login</a>
         </div>
       </div>
     </div>
@@ -105,9 +78,5 @@ function ResetPasswordPageContent() {
 }
 
 export default function ResetPasswordPage() {
-  return (
-    <Provider store={store}>
-      <ResetPasswordPageContent />
-    </Provider>
-  )
+  return <ResetPasswordPageContent />
 }

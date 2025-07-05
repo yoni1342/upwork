@@ -1,27 +1,36 @@
-import React, { useEffect } from "react"
-import { useSelector, useDispatch } from "react-redux"
-import type { RootState, AppDispatch } from "./store"
-import { checkCurrentUser } from "./Slice/authSlice"
+import React, { useEffect, useState, useCallback } from "react"
 import LandingPage from "./components/landingPage"
 
 export default function SidePanelContent() {
-  const dispatch = useDispatch<AppDispatch>()
-  const showSidepanel = useSelector((state: RootState) => state.sidepanel.showSidepanel)
-  //const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated)
-  const loading = useSelector((state: RootState) => state.auth.loading)
+  const [state, setState] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
+  // Helper to get Redux state from background
+  const fetchReduxState = useCallback(() => {
+    chrome.runtime.sendMessage({ type: "REDUX_GET_STATE" }, (response) => {
+      setState(response?.state)
+      setLoading(false)
+    })
+  }, [])
+
+  // Listen for state updates from background
   useEffect(() => {
-    // Check if user is authenticated on component mount
-    dispatch(checkCurrentUser())
-  }, [dispatch])
+    fetchReduxState()
+    const listener = (msg: any) => {
+      if (msg.type === "REDUX_STATE_UPDATED") {
+        setState(msg.state)
+      }
+    }
+    chrome.runtime.onMessage.addListener(listener)
+    return () => chrome.runtime.onMessage.removeListener(listener)
+  }, [fetchReduxState])
 
-  // Don't render if sidepanel should be hidden or user is authenticated
-  if (!showSidepanel) {
-    return null
-  }
+  // Example: dispatch action to background
+  // const dispatchAction = (action: any) => {
+  //   chrome.runtime.sendMessage({ type: "REDUX_DISPATCH_ACTION", action })
+  // }
 
-  // Show loading state while checking authentication
-  if (loading) {
+  if (loading || !state) {
     return (
       <div style={{ padding: "1rem" }}>
         <div className="text-center">
@@ -32,9 +41,13 @@ export default function SidePanelContent() {
     )
   }
 
+  if (!state.sidepanel?.showSidepanel) {
+    return null
+  }
+
   return (
     <div style={{ padding: "1rem" }}>
       <LandingPage />
     </div>
   )
-} 
+}

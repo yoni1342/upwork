@@ -1,36 +1,49 @@
-import React, { useEffect } from "react"
-import { Provider } from "react-redux"
-import { useSelector } from "react-redux"
-import { useDispatch } from "react-redux"
-import { checkCurrentUser, signOutUser } from "../Slice/authSlice"
-import type { RootState, AppDispatch } from "../store"
-import { store } from "../store"
+import React, { useEffect, useState, useCallback } from "react"
 import "../style.css"
 
 function DashboardPageContent() {
-  const dispatch = useDispatch<AppDispatch>()
-  const { user, isAuthenticated, loading } = useSelector((state: RootState) => state.auth)
+  const [state, setState] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  // Fetch Redux state from background
+  const fetchReduxState = useCallback(() => {
+    chrome.runtime.sendMessage({ type: "REDUX_GET_STATE" }, (response) => {
+      setState(response?.state)
+      setLoading(false)
+    })
+  }, [])
+
+  useEffect(() => {
+    fetchReduxState()
+    const listener = (msg: any) => {
+      if (msg.type === "REDUX_STATE_UPDATED") {
+        setState(msg.state)
+      }
+    }
+    chrome.runtime.onMessage.addListener(listener)
+    return () => chrome.runtime.onMessage.removeListener(listener)
+  }, [fetchReduxState])
 
   useEffect(() => {
     // Check if user is authenticated
-    dispatch(checkCurrentUser())
-  }, [dispatch])
+    chrome.runtime.sendMessage({ type: "REDUX_DISPATCH_ACTION", action: { type: "auth/checkCurrentUser" } })
+  }, [])
 
+  // Redirect to login if not authenticated
   useEffect(() => {
-    // Remove redirect to login if not authenticated
-    // Optionally, you can show a message or UI here if needed
-  }, [isAuthenticated, loading])
-
-  const handleSignOut = async () => {
-    try {
-      await dispatch(signOutUser())
+    if (state && !state.auth?.isAuthenticated ) {
       window.location.replace("/tabs/login.html")
-    } catch (error) {
-      console.error("Error signing out:", error)
     }
+  }, [state, loading])
+
+  const handleSignOut = () => {
+    chrome.runtime.sendMessage({ type: "SIGNOUT_REQUEST" }, () => {
+      setState(null)
+      window.location.replace("/tabs/login.html")
+    })
   }
 
-  if (loading) {
+  if (loading || !state) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center">
         <div className="text-center">
@@ -39,11 +52,6 @@ function DashboardPageContent() {
         </div>
       </div>
     )
-  }
-
-  if (!user) {
-    // Optionally, show a message or UI if not authenticated
-    return null
   }
 
   return (
@@ -57,7 +65,7 @@ function DashboardPageContent() {
               <h1 className="text-2xl font-bold text-gray-900">Upwex Dashboard</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700">Welcome, {user.email}</span>
+              <span className="text-gray-700">Welcome, {state.auth?.user?.email}</span>
               <button
                 onClick={handleSignOut}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
@@ -157,9 +165,5 @@ function DashboardPageContent() {
 }
 
 export default function DashboardPage() {
-  return (
-    <Provider store={store}>
-      <DashboardPageContent />
-    </Provider>
-  )
+  return <DashboardPageContent />
 }
