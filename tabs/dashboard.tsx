@@ -25,7 +25,7 @@ function DashboardPageContent() {
   }, [fetchReduxState])
 
   useEffect(() => {
-    // Check if user is authenticated
+    // Always check session on mount
     chrome.runtime.sendMessage({ type: "REDUX_DISPATCH_ACTION", action: { type: "auth/checkCurrentUser" } })
   }, [])
 

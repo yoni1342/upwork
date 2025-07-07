@@ -29,7 +29,7 @@ function LoginPageContent() {
   useEffect(() => {
     // Hide sidepanel when on login page
     chrome.runtime.sendMessage({ type: "REDUX_DISPATCH_ACTION", action: { type: "sidepanel/hideSidepanel" } })
-    // Check if user is already authenticated
+    // Always check session on mount
     chrome.runtime.sendMessage({ type: "REDUX_DISPATCH_ACTION", action: { type: "auth/checkCurrentUser" } })
   }, [])
 

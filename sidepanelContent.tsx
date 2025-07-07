@@ -17,6 +17,8 @@ export default function SidePanelContent() {
   // Listen for state updates from background
   useEffect(() => {
     fetchReduxState()
+    // Always check session on mount
+    chrome.runtime.sendMessage({ type: "REDUX_DISPATCH_ACTION", action: { type: "auth/checkCurrentUser" } })
     const listener = (msg: any) => {
       if (msg.type === "REDUX_STATE_UPDATED") {
         setState(msg.state)
