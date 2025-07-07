@@ -1,5 +1,7 @@
 // content/upwork_scraper.ts
 import type { PlasmoCSConfig } from "plasmo"
+import { mountBanner } from "~/components/banner"
+import { mountSideButton } from "~/components/SideButton"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://www.upwork.com/freelancers/*"],
@@ -30,6 +32,20 @@ function waitForSelector(selector: string, timeout = 15000): Promise<Element> {
       reject(`Timeout waiting for selector: ${selector}`)
     }, timeout)
   })
+}
+
+// Inject the banner when DOM is ready
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", mountBanner)
+} else {
+  mountBanner()
+}
+
+// Inject the side button when DOM is ready
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", mountSideButton)
+} else {
+  mountSideButton()
 }
 
 async function scrapeAndLogProfile() {
