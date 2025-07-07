@@ -42,20 +42,41 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
     // Handle login request from UI
     if (message.type === 'LOGIN_REQUEST') {
       const { email, password } = message.payload
+      console.log("LOGIN_REQUEST received", { email })
       store.dispatch(require('./Slice/authSlice').signInWithEmail({ email, password }))
-        .then(() => {
-          chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
-          sendResponse({ status: 'Login attempted' })
+        .then((result: any) => {
+          console.log("signInWithEmail result:", result)
+          store.dispatch(require('./Slice/authSlice').checkCurrentUser())
+            .then((checkResult: any) => {
+              console.log("checkCurrentUser result:", checkResult)
+              setTimeout(() => {
+                const state = store.getState()
+                console.log("Redux state after login:", state)
+                chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state })
+                sendResponse({ status: 'Login attempted', state })
+              }, 100)
+            })
+            .catch((err: any) => {
+              console.error("checkCurrentUser error:", err)
+              sendResponse({ status: 'Login attempted', error: err })
+            })
         })
-      return true // async
+        .catch((err: any) => {
+          console.error("signInWithEmail error:", err)
+          sendResponse({ status: 'Login error', error: err })
+        })
+      return true // async response
     }
+
     // Handle registration request from UI
     if (message.type === 'REGISTER_REQUEST') {
       const { email, password } = message.payload
       store.dispatch(require('./Slice/authSlice').signUpWithEmail({ email, password }))
         .then(() => {
-          chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
-          sendResponse({ status: 'Registration attempted' })
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
+            sendResponse({ status: 'Registration attempted' })
+          }, 100)
         })
       return true // async
     }
@@ -64,8 +85,10 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
       const { email } = message.payload
       store.dispatch(require('./Slice/authSlice').sendResetEmail(email))
         .then(() => {
-          chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
-          sendResponse({ status: 'Reset attempted' })
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
+            sendResponse({ status: 'Reset attempted' })
+          }, 100)
         })
       return true // async
     }
@@ -73,8 +96,10 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
     if (message.type === 'SIGNOUT_REQUEST') {
       store.dispatch(require('./Slice/authSlice').signOutUser())
         .then(() => {
-          chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
-          sendResponse({ status: 'Sign out attempted' })
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
+            sendResponse({ status: 'Sign out attempted' })
+          }, 100)
         })
       return true // async
     }

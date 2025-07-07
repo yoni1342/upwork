@@ -34,10 +34,18 @@ function LoginPageContent() {
   }, [])
 
   useEffect(() => {
-    if (state?.auth?.isAuthenticated) {
+    // Debug current auth state
+    console.log("🔐 Auth state:", state?.auth)
+    if (state?.auth?.error) {
+      console.log("🔴 Auth error:", state?.auth?.error)
+      setError(state.auth.error)
+    }
+    // Redirect to dashboard after login
+    if (state?.auth?.isAuthenticated && !state?.auth?.loading) {
+      console.log("✅ Redirecting to dashboard")
       window.location.replace("/tabs/dashboard.html")
     }
-  }, [state?.auth?.isAuthenticated])
+  }, [state?.auth?.isAuthenticated, state?.auth?.loading, state?.auth?.error])
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -49,7 +57,15 @@ function LoginPageContent() {
     chrome.runtime.sendMessage({
       type: "LOGIN_REQUEST",
       payload: { email, password }
-    }, () => setLoading(false))
+    }, (response) => {
+      setLoading(false)
+      if (response?.error) {
+        console.log("🔴 Login error from background:", response.error)
+        setError(response.error)
+      } else {
+        console.log("🟢 Login response from background:", response)
+      }
+    })
   }
 
   return (

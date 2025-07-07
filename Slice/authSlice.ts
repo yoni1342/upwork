@@ -40,12 +40,27 @@ export const signInWithEmail = createAsyncThunk(
   "auth/signInWithEmail",
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
-      // Optionally, fetch user after sign in
-      const { data: userData } = await supabase.auth.getUser()
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        console.error("Supabase signInWithPassword error:", error)
+        throw error
+      }
+
+      // ✅ Store token in chrome.storage.local for extension-wide access
+      if (signInData?.session?.access_token) {
+        await chrome.storage.local.set({ supabase_token: signInData.session.access_token })
+        console.log("Stored access_token in chrome.storage.local")
+      }
+
+      // ✅ Return the signed-in user
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError) {
+        console.error("Supabase getUser error:", userError)
+        throw userError
+      }
       return userData.user
     } catch (error: unknown) {
+      console.error("signInWithEmail thunk error:", error)
       if (error instanceof Error) {
         return rejectWithValue(error.message)
       }
