@@ -7,7 +7,7 @@ const sidepanelSlice = createSlice({
   },
   reducers: {
     hideSidepanel: (state) => {
-      state.showSidepanel = false
+      state.showSidepanel = true
     },
     showSidepanel: (state) => {
       state.showSidepanel = true

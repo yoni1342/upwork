@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react"
 import LandingPage from "./components/landingPage"
+import LandingPageLoggedIn from "./components/landingPageLoggedIn"
 
 export default function SidePanelContent() {
   const [state, setState] = useState<any>(null)
@@ -45,6 +46,16 @@ export default function SidePanelContent() {
     return null
   }
 
+  // Show logged-in landing page if authenticated
+  if (state.auth?.isAuthenticated) {
+    return (
+      <div style={{ padding: "1rem" }}>
+        <LandingPageLoggedIn user={state.auth.user} />
+      </div>
+    )
+  }
+
+  // Otherwise, show guest landing page
   return (
     <div style={{ padding: "1rem" }}>
       <LandingPage />

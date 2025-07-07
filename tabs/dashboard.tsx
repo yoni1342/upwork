@@ -31,6 +31,7 @@ function DashboardPageContent() {
 
   // Redirect to login if not authenticated
   useEffect(() => {
+    console.log("Dashboard auth state:", state?.auth)
     if (state && !state.auth?.isAuthenticated ) {
       window.location.replace("/tabs/login.html")
     }
