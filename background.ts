@@ -114,6 +114,32 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
       }
       return false
     }
+    // Relay SHOW_SYNCH_PROFILE to all extension views and open side panel
+    if (message.type === 'SHOW_SYNCH_PROFILE') {
+      if (chrome.sidePanel && chrome.sidePanel.open && sender && sender.tab && sender.tab.windowId) {
+        chrome.sidePanel.open({ windowId: sender.tab.windowId }).then(() => {
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'SHOW_SYNCH_PROFILE' })
+          }, 300)
+        })
+      } else {
+        chrome.runtime.sendMessage({ type: 'SHOW_SYNCH_PROFILE' })
+      }
+      return false
+    }
+    // Relay SHOW_SETTING to all extension views and open side panel
+    if (message.type === 'SHOW_SETTING') {
+      if (chrome.sidePanel && chrome.sidePanel.open && sender && sender.tab && sender.tab.windowId) {
+        chrome.sidePanel.open({ windowId: sender.tab.windowId }).then(() => {
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'SHOW_SETTING' })
+          }, 300)
+        })
+      } else {
+        chrome.runtime.sendMessage({ type: 'SHOW_SETTING' })
+      }
+      return false
+    }
     // Return true to indicate async response if needed
     return false
   })

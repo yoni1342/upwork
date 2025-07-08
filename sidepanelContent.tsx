@@ -1,11 +1,14 @@
 import React, { useEffect, useState, useCallback } from "react"
 import LandingPage from "./components/landingPage"
 import LandingPageLoggedIn from "./components/landingPageLoggedIn"
+import SynchProfile from "./components/synchProfile"
+import Setting from "./components/setting"
 
 export default function SidePanelContent() {
   const [state, setState] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [showLandingPage, setShowLandingPage] = useState(false)
+  const [showSynchProfile, setShowSynchProfile] = useState(false)
+  const [showSetting, setShowSetting] = useState(false)
 
   // Helper to get Redux state from background
   const fetchReduxState = useCallback(() => {
@@ -29,17 +32,28 @@ export default function SidePanelContent() {
     return () => chrome.runtime.onMessage.removeListener(listener)
   }, [fetchReduxState])
 
-  // Listen for show-landing-page event
   useEffect(() => {
-    const handler = () => setShowLandingPage(true)
-    window.addEventListener('show-landing-page', handler)
-    return () => window.removeEventListener('show-landing-page', handler)
+    setShowSynchProfile(false)
+    setShowSetting(false)
   }, [])
 
-  // Example: dispatch action to background
-  // const dispatchAction = (action: any) => {
-  //   chrome.runtime.sendMessage({ type: "REDUX_DISPATCH_ACTION", action })
-  // }
+  // Listen for SHOW_SYNCH_PROFILE and SHOW_SETTING messages
+  useEffect(() => {
+    const handler = (msg: any, sender: any, sendResponse: any) => {
+      if (msg.type === 'SHOW_SYNCH_PROFILE') {
+        setShowSynchProfile(true)
+        setShowSetting(false)
+      }
+      if (msg.type === 'SHOW_SETTING') {
+        setShowSetting(true)
+        setShowSynchProfile(false)
+      }
+    }
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener(handler)
+      return () => chrome.runtime.onMessage.removeListener(handler)
+    }
+  }, [])
 
   if (loading || !state) {
     return (
@@ -56,11 +70,20 @@ export default function SidePanelContent() {
     return null
   }
 
-  // Show LandingPage if triggered by event
-  if (showLandingPage) {
+  // Show SynchProfile if triggered
+  if (showSynchProfile) {
     return (
       <div style={{ padding: "1rem" }}>
-        <LandingPage />
+        <SynchProfile />
+      </div>
+    )
+  }
+
+  // Show Setting if triggered
+  if (showSetting) {
+    return (
+      <div style={{ padding: "1rem" }}>
+        <Setting />
       </div>
     )
   }

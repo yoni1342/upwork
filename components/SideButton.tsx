@@ -44,7 +44,12 @@ const SideButton = () => {
   // Open login page in a new tab (like LandingPage)
   const handleProfileClick = () => {
     if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.sendMessage({ type: 'SHOW_LANDING_PAGE' })
+      chrome.runtime.sendMessage({ type: 'SHOW_SYNCH_PROFILE' })
+    }
+  }
+  const handleSettingsClick = () => {
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      chrome.runtime.sendMessage({ type: 'SHOW_SETTING' })
     }
   }
 
@@ -63,7 +68,7 @@ const SideButton = () => {
         {hovered && (
           <>
             <IconWithTooltip icon={<PersonIcon />} label="Profile" onClick={handleProfileClick} />
-            <IconWithTooltip icon={<SettingsIcon />} label="Settings" />
+            <IconWithTooltip icon={<SettingsIcon />} label="Settings" onClick={handleSettingsClick} />
           </>
         )}
       </div>
