@@ -86,6 +86,61 @@ export const sendProfileToSupabase = createAsyncThunk(
   }
 )
 
+// Thunk to fetch profile and related data from Supabase
+export const fetchProfileFromSupabase = createAsyncThunk(
+  "profile/fetchFromSupabase",
+  async (user_id: string, { rejectWithValue }) => {
+    try {
+      // 1. Fetch Profile
+      const { data: profileData, error: profileError } = await supabase
+        .from("Profile")
+        .select("*")
+        .eq("user_id", user_id)
+        .single()
+      if (profileError) throw profileError
+      const profile_id = profileData.id
+
+      // 2. Fetch Skills
+      const { data: skills, error: skillError } = await supabase
+        .from("Skill")
+        .select("name")
+        .eq("profile_id", profile_id)
+      if (skillError) throw skillError
+
+      // 3. Fetch Certifications
+      const { data: certifications, error: certError } = await supabase
+        .from("Certification")
+        .select("name")
+        .eq("profile_id", profile_id)
+      if (certError) throw certError
+
+      // 4. Fetch Experience
+      const { data: experience, error: expError } = await supabase
+        .from("Experience")
+        .select("company, description")
+        .eq("profile_id", profile_id)
+      if (expError) throw expError
+
+      // 5. Fetch Work History
+      const { data: workHistory, error: workError } = await supabase
+        .from("workHistory")
+        .select("project_title, rating, feedback")
+        .eq("profile_id", profile_id)
+      if (workError) throw workError
+
+      return {
+        profile: profileData,
+        skills: skills?.map((s) => s.name) || [],
+        certifications: certifications?.map((c) => c.name) || [],
+        experience: experience || [],
+        workHistory: workHistory || [],
+      }
+    } catch (err) {
+      return rejectWithValue((err as Error).message || err)
+    }
+  }
+)
+
 const profileSlice = createSlice({
   name: "profile",
   initialState: {
@@ -93,6 +148,7 @@ const profileSlice = createSlice({
     loading: false,
     error: null,
     supabaseProfile: null,
+    fetchedProfile: null,
   },
   reducers: {
     setProfile(state, action) {
@@ -112,6 +168,19 @@ const profileSlice = createSlice({
         // state.profile = action.meta.arg // <-- This is the original payload
       })
       .addCase(sendProfileToSupabase.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+      // Add extra reducers for fetchProfileFromSupabase
+      .addCase(fetchProfileFromSupabase.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchProfileFromSupabase.fulfilled, (state, action) => {
+        state.loading = false
+        state.fetchedProfile = action.payload
+      })
+      .addCase(fetchProfileFromSupabase.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
       })
