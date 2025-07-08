@@ -5,6 +5,7 @@ import LandingPageLoggedIn from "./components/landingPageLoggedIn"
 export default function SidePanelContent() {
   const [state, setState] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [showLandingPage, setShowLandingPage] = useState(false)
 
   // Helper to get Redux state from background
   const fetchReduxState = useCallback(() => {
@@ -28,6 +29,13 @@ export default function SidePanelContent() {
     return () => chrome.runtime.onMessage.removeListener(listener)
   }, [fetchReduxState])
 
+  // Listen for show-landing-page event
+  useEffect(() => {
+    const handler = () => setShowLandingPage(true)
+    window.addEventListener('show-landing-page', handler)
+    return () => window.removeEventListener('show-landing-page', handler)
+  }, [])
+
   // Example: dispatch action to background
   // const dispatchAction = (action: any) => {
   //   chrome.runtime.sendMessage({ type: "REDUX_DISPATCH_ACTION", action })
@@ -46,6 +54,15 @@ export default function SidePanelContent() {
 
   if (!state.sidepanel?.showSidepanel) {
     return null
+  }
+
+  // Show LandingPage if triggered by event
+  if (showLandingPage) {
+    return (
+      <div style={{ padding: "1rem" }}>
+        <LandingPage />
+      </div>
+    )
   }
 
   // Show logged-in landing page if authenticated

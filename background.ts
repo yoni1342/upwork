@@ -103,6 +103,17 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         })
       return true // async
     }
+    // Relay SHOW_LANDING_PAGE to all extension views and open side panel
+    if (message.type === 'SHOW_LANDING_PAGE') {
+      if (chrome.sidePanel && chrome.sidePanel.open && sender && sender.tab && sender.tab.windowId) {
+        chrome.sidePanel.open({ windowId: sender.tab.windowId }).then(() => {
+          chrome.runtime.sendMessage({ type: 'SHOW_LANDING_PAGE' })
+        })
+      } else {
+        chrome.runtime.sendMessage({ type: 'SHOW_LANDING_PAGE' })
+      }
+      return false
+    }
     // Return true to indicate async response if needed
     return false
   })
