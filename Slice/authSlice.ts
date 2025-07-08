@@ -25,6 +25,10 @@ export const signOutUser = createAsyncThunk(
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
+
+      // Remove token from chrome.storage.local
+      await chrome.storage.local.remove("supabase_token")
+
       return null
     } catch (error: unknown) {
       if (error instanceof Error) {
