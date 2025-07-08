@@ -140,6 +140,12 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
       }
       return false
     }
+    // Handle GET_CURRENT_USER request from content script
+    if (message.type === 'GET_CURRENT_USER') {
+      const state = store.getState()
+      sendResponse({ user: state.auth?.user })
+      return true
+    }
     // Return true to indicate async response if needed
     return false
   })

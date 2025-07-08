@@ -115,7 +115,7 @@ async function scrapeAndLogProfile() {
 
     // ✅ Final structured output
     const scrapedProfile = {
-      imag: (document.querySelector('img.air3-avatar.air3-avatar-88') as HTMLImageElement)?.src || null,
+      image: (document.querySelector('img.air3-avatar.air3-avatar-88') as HTMLImageElement)?.src || null,
       name: document.querySelector('h2[itemprop="name"]')?.textContent?.trim() || null,
       location: document.querySelector('span.d-inline-block.vertical-align-middle.ellipsis')?.textContent?.trim() || null,
       about: document.querySelector('span.text-pre-line.break')?.textContent?.trim() || null,
@@ -130,9 +130,15 @@ async function scrapeAndLogProfile() {
 
     console.log("🟢 Scraped Profile:", scrapedProfile)
 
-    // Send to background for Redux/Supabase
+    // Get user_id from background and send with profile
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-      chrome.runtime.sendMessage({ type: 'SCRAPED_PROFILE', payload: scrapedProfile })
+      chrome.runtime.sendMessage({ type: 'GET_CURRENT_USER' }, (response) => {
+        const userId = response?.user?.id || null
+        const profileWithUserId = { ...scrapedProfile, user_id: userId }
+        console.log("🟢 Scraped Profile with user_id:", profileWithUserId)
+        // Send to backend
+        chrome.runtime.sendMessage({ type: 'SCRAPED_PROFILE', payload: profileWithUserId })
+      })
     }
 
   } catch (err) {
