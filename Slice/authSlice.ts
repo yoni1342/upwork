@@ -25,6 +25,7 @@ export const signOutUser = createAsyncThunk(
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
+
       return null
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -41,11 +42,20 @@ export const signInWithEmail = createAsyncThunk(
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
-      // Optionally, fetch user after sign in
-      const { data: userData } = await supabase.auth.getUser()
+      if (error) {
+        console.error("Supabase signInWithPassword error:", error)
+        throw error
+      }
+
+      // ✅ Return the signed-in user
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError) {
+        console.error("Supabase getUser error:", userError)
+        throw userError
+      }
       return userData.user
     } catch (error: unknown) {
+      console.error("signInWithEmail thunk error:", error)
       if (error instanceof Error) {
         return rejectWithValue(error.message)
       }

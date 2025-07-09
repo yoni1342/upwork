@@ -7,10 +7,12 @@ interface ProfilePayload {
   about: string | null
   hourlyRate: string | null
   role: string | null
-  skills: string[]
-  certifications: string[]
-  workHistory: { projectTitle: string; rating: string; feedback: string }[]
-  experience: { titleCompany: string; description: string }[]
+  skills: string[] | null
+  certifications: string[] | null
+  workHistory: { projectTitle: string; rating: string; feedback: string }[] | null
+  experience: { titleCompany: string; description: string }[] | null
+  user_id?: string | null
+  upworkUserId?: string | null
 }
 
 // Thunk to send profile data to Supabase
@@ -19,17 +21,19 @@ export const sendProfileToSupabase = createAsyncThunk(
   async (profile: ProfilePayload, { rejectWithValue }) => {
     try {
       // 1. Insert into Profile
-      const { name, location, about, hourlyRate, role, skills, certifications, workHistory, experience } = profile
+      const { name, user_id, upworkUserId, location, about, hourlyRate, role, skills, certifications, workHistory, experience,image} = profile
       const { data: profileData, error: profileError } = await supabase
         .from("Profile")
         .insert([
           {
             name,
-            //user_id: "516e4164-6ca7-447b-a968-74f087ffb3ad", // <-- Replace with a real UUID as needed
+            user_id,
             location,
             about,
             hourly_rate: hourlyRate ? parseFloat(hourlyRate.replace(/[^\d.]/g, "")) : null,
             role,
+            upwork_user_id: upworkUserId,
+            image
           },
         ])
         .select()
@@ -38,23 +42,22 @@ export const sendProfileToSupabase = createAsyncThunk(
       if (profileError) throw profileError
       const profile_id = profileData.id
 
-
       // 2. Insert Skills
-      if (skills && skills.length > 0) {
+      if (skills?.length) {
         const skillRows = skills.map((name) => ({ profile_id, name }))
         const { error: skillError } = await supabase.from("Skill").insert(skillRows)
         if (skillError) throw skillError
       }
 
       // 3. Insert Certifications
-      if (certifications && certifications.length > 0) {
+      if (certifications?.length) {
         const certRows = certifications.map((name) => ({ profile_id, name }))
         const { error: certError } = await supabase.from("Certification").insert(certRows)
         if (certError) throw certError
       }
 
       // 4. Insert Experience
-      if (experience && experience.length > 0) {
+      if (experience?.length) {
         const expRows = experience.map((exp) => ({
           profile_id,
           company: exp.titleCompany,
@@ -65,7 +68,7 @@ export const sendProfileToSupabase = createAsyncThunk(
       }
 
       // 5. Insert Work History
-      if (workHistory && workHistory.length > 0) {
+      if (workHistory?.length) {
         const workRows = workHistory.map((w) => ({
           profile_id,
           project_title: w.projectTitle,
@@ -78,7 +81,62 @@ export const sendProfileToSupabase = createAsyncThunk(
 
       return profileData
     } catch (err) {
-      return rejectWithValue(err.message || err)
+      return rejectWithValue((err as Error).message || err)
+    }
+  }
+)
+
+// Thunk to fetch profile and related data from Supabase
+export const fetchProfileFromSupabase = createAsyncThunk(
+  "profile/fetchFromSupabase",
+  async (user_id: string, { rejectWithValue }) => {
+    try {
+      // 1. Fetch Profile
+      const { data: profileData, error: profileError } = await supabase
+        .from("Profile")
+        .select("*")
+        .eq("user_id", user_id)
+        .single()
+      if (profileError) throw profileError
+      const profile_id = profileData.id
+
+      // 2. Fetch Skills
+      const { data: skills, error: skillError } = await supabase
+        .from("Skill")
+        .select("name")
+        .eq("profile_id", profile_id)
+      if (skillError) throw skillError
+
+      // 3. Fetch Certifications
+      const { data: certifications, error: certError } = await supabase
+        .from("Certification")
+        .select("name")
+        .eq("profile_id", profile_id)
+      if (certError) throw certError
+
+      // 4. Fetch Experience
+      const { data: experience, error: expError } = await supabase
+        .from("Experience")
+        .select("company, description")
+        .eq("profile_id", profile_id)
+      if (expError) throw expError
+
+      // 5. Fetch Work History
+      const { data: workHistory, error: workError } = await supabase
+        .from("workHistory")
+        .select("project_title, rating, feedback")
+        .eq("profile_id", profile_id)
+      if (workError) throw workError
+
+      return {
+        profile: profileData,
+        skills: skills?.map((s) => s.name) || [],
+        certifications: certifications?.map((c) => c.name) || [],
+        experience: experience || [],
+        workHistory: workHistory || [],
+      }
+    } catch (err) {
+      return rejectWithValue((err as Error).message || err)
     }
   }
 )
@@ -90,6 +148,7 @@ const profileSlice = createSlice({
     loading: false,
     error: null,
     supabaseProfile: null,
+    fetchedProfile: null,
   },
   reducers: {
     setProfile(state, action) {
@@ -109,6 +168,19 @@ const profileSlice = createSlice({
         // state.profile = action.meta.arg // <-- This is the original payload
       })
       .addCase(sendProfileToSupabase.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+      // Add extra reducers for fetchProfileFromSupabase
+      .addCase(fetchProfileFromSupabase.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchProfileFromSupabase.fulfilled, (state, action) => {
+        state.loading = false
+        state.fetchedProfile = action.payload
+      })
+      .addCase(fetchProfileFromSupabase.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
       })

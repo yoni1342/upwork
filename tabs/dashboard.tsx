@@ -25,12 +25,13 @@ function DashboardPageContent() {
   }, [fetchReduxState])
 
   useEffect(() => {
-    // Check if user is authenticated
+    // Always check session on mount
     chrome.runtime.sendMessage({ type: "REDUX_DISPATCH_ACTION", action: { type: "auth/checkCurrentUser" } })
   }, [])
 
   // Redirect to login if not authenticated
   useEffect(() => {
+    console.log("Dashboard auth state:", state?.auth)
     if (state && !state.auth?.isAuthenticated ) {
       window.location.replace("/tabs/login.html")
     }

@@ -1,5 +1,6 @@
 import { store } from "./store"
-import { setProfile, sendProfileToSupabase } from "./Slice/profileSlice"
+import { setProfile, sendProfileToSupabase, fetchProfileFromSupabase } from "./Slice/profileSlice"
+import { signInWithEmail, checkCurrentUser, signUpWithEmail, sendResetEmail, signOutUser } from "./Slice/authSlice"
 
 // Handle extension icon click to open sidepanel
 if (typeof chrome !== 'undefined' && chrome.action) {
@@ -19,10 +20,10 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
       // Dispatch Redux actions
       store.dispatch(setProfile(message.payload))
       store.dispatch(sendProfileToSupabase(message.payload))
-        .then((result) => {
+        .then((result: unknown) => {
           console.log("Supabase insert result:", result)
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error("Supabase insert error:", err)
         })
       sendResponse({ status: 'Profile received and processing started.' })
@@ -42,39 +43,120 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
     // Handle login request from UI
     if (message.type === 'LOGIN_REQUEST') {
       const { email, password } = message.payload
-      store.dispatch(require('./Slice/authSlice').signInWithEmail({ email, password }))
-        .then(() => {
-          chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
-          sendResponse({ status: 'Login attempted' })
+      console.log("LOGIN_REQUEST received", { email })
+      store.dispatch(signInWithEmail({ email, password }))
+        .then((result: unknown) => {
+          console.log("signInWithEmail result:", result)
+          store.dispatch(checkCurrentUser())
+            .then((checkResult: unknown) => {
+              console.log("checkCurrentUser result:", checkResult)
+              setTimeout(() => {
+                const state = store.getState()
+                console.log("Redux state after login:", state)
+                chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state })
+                sendResponse({ status: 'Login attempted', state })
+              }, 100)
+            })
+            .catch((err: unknown) => {
+              console.error("checkCurrentUser error:", err)
+              sendResponse({ status: 'Login attempted', error: err })
+            })
         })
-      return true // async
+        .catch((err: unknown) => {
+          console.error("signInWithEmail error:", err)
+          sendResponse({ status: 'Login error', error: err })
+        })
+      return true // async response
     }
+
     // Handle registration request from UI
     if (message.type === 'REGISTER_REQUEST') {
       const { email, password } = message.payload
-      store.dispatch(require('./Slice/authSlice').signUpWithEmail({ email, password }))
+      store.dispatch(signUpWithEmail({ email, password }))
         .then(() => {
-          chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
-          sendResponse({ status: 'Registration attempted' })
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
+            sendResponse({ status: 'Registration attempted' })
+          }, 100)
         })
       return true // async
     }
     // Handle password reset request from UI
     if (message.type === 'RESET_PASSWORD_REQUEST') {
       const { email } = message.payload
-      store.dispatch(require('./Slice/authSlice').sendResetEmail(email))
+      store.dispatch(sendResetEmail(email))
         .then(() => {
-          chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
-          sendResponse({ status: 'Reset attempted' })
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
+            sendResponse({ status: 'Reset attempted' })
+          }, 100)
         })
       return true // async
     }
     // Handle sign out request from UI
     if (message.type === 'SIGNOUT_REQUEST') {
-      store.dispatch(require('./Slice/authSlice').signOutUser())
+      store.dispatch(signOutUser())
         .then(() => {
-          chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
-          sendResponse({ status: 'Sign out attempted' })
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'REDUX_STATE_UPDATED', state: store.getState() })
+            sendResponse({ status: 'Sign out attempted' })
+          }, 100)
+        })
+      return true // async
+    }
+    // Relay SHOW_LANDING_PAGE to all extension views and open side panel
+    if (message.type === 'SHOW_LANDING_PAGE') {
+      if (chrome.sidePanel && chrome.sidePanel.open && sender && sender.tab && sender.tab.windowId) {
+        chrome.sidePanel.open({ windowId: sender.tab.windowId }).then(() => {
+          chrome.runtime.sendMessage({ type: 'SHOW_LANDING_PAGE' })
+        })
+      } else {
+        chrome.runtime.sendMessage({ type: 'SHOW_LANDING_PAGE' })
+      }
+      return false
+    }
+    // Relay SHOW_SYNCH_PROFILE to all extension views and open side panel
+    if (message.type === 'SHOW_SYNCH_PROFILE') {
+      if (chrome.sidePanel && chrome.sidePanel.open && sender && sender.tab && sender.tab.windowId) {
+        chrome.sidePanel.open({ windowId: sender.tab.windowId }).then(() => {
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'SHOW_SYNCH_PROFILE' })
+          }, 300)
+        })
+      } else {
+        chrome.runtime.sendMessage({ type: 'SHOW_SYNCH_PROFILE' })
+      }
+      return false
+    }
+    // Relay SHOW_SETTING to all extension views and open side panel
+    if (message.type === 'SHOW_SETTING') {
+      if (chrome.sidePanel && chrome.sidePanel.open && sender && sender.tab && sender.tab.windowId) {
+        chrome.sidePanel.open({ windowId: sender.tab.windowId }).then(() => {
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'SHOW_SETTING' })
+          }, 300)
+        })
+      } else {
+        chrome.runtime.sendMessage({ type: 'SHOW_SETTING' })
+      }
+      return false
+    }
+    // Handle GET_CURRENT_USER request from content script
+    if (message.type === 'GET_CURRENT_USER') {
+      const state = store.getState()
+      sendResponse({ user: state.auth?.user })
+      return true
+    }
+    // Handle FETCH_PROFILE request from UI
+    if (message.type === 'FETCH_PROFILE') {
+      const { user_id } = message.payload
+      store.dispatch(fetchProfileFromSupabase(user_id))
+        .then((result: unknown) => {
+          // @ts-expect-error result type is unknown and may not have payload/error properties
+          sendResponse({ status: 'Profile fetched', data: result.payload, error: result.error })
+        })
+        .catch((err: unknown) => {
+          sendResponse({ status: 'Profile fetch error', error: err })
         })
       return true // async
     }
