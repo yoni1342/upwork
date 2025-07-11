@@ -3,6 +3,7 @@ import LandingPage from "./components/landingPage"
 import LandingPageLoggedIn from "./components/landingPageLoggedIn"
 import SynchProfile from "./components/synchProfile"
 import Setting from "./components/setting"
+import CoverLetterModal from "./components/coverLetterModal"
 
 interface AuthState {
   user: unknown // TODO: Replace with a proper user type if available
@@ -24,6 +25,8 @@ export default function SidePanelContent() {
   const [loading, setLoading] = useState(true)
   const [showSynchProfile, setShowSynchProfile] = useState(false)
   const [showSetting, setShowSetting] = useState(false)
+  const [showCoverLetterModal, setShowCoverLetterModal] = useState(false)
+  // Remove coverLetterModalData state
 
   // Helper to get Redux state from background
   const fetchReduxState = useCallback(() => {
@@ -51,74 +54,46 @@ export default function SidePanelContent() {
     setShowSetting(false)
   }, [])
 
-  // Listen for SHOW_SYNCH_PROFILE and SHOW_SETTING messages
+  // Listen for SHOW_SYNCH_PROFILE, SHOW_SETTING, and OPEN_COVER_LETTER_MODAL messages
   useEffect(() => {
     const handler = (msg: { type: string }) => {
       if (msg.type === 'SHOW_SYNCH_PROFILE') {
         setShowSynchProfile(true)
         setShowSetting(false)
-        // Always check session when opening SynchProfile
         chrome.runtime.sendMessage({ type: "REDUX_DISPATCH_ACTION", action: { type: "auth/checkCurrentUser" } })
       }
       if (msg.type === 'SHOW_SETTING') {
         setShowSetting(true)
         setShowSynchProfile(false)
-        // Always check session when opening Setting
         chrome.runtime.sendMessage({ type: "REDUX_DISPATCH_ACTION", action: { type: "auth/checkCurrentUser" } })
+      }
+      if (msg.type === 'OPEN_COVER_LETTER_MODAL') {
+        setShowCoverLetterModal(true)
       }
     }
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
       chrome.runtime.onMessage.addListener(handler)
       return () => chrome.runtime.onMessage.removeListener(handler)
     }
-  }, [])
+  }, [state])
 
-  if (loading || !state) {
-    return (
-      <div style={{ padding: "1rem" }}>
+  // Render the modal above all content if needed
+  return (
+    <div style={{ padding: "1rem", position: "relative" }}>
+      {loading || !state ? (
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-sm text-gray-600">Loading...</p>
         </div>
-      </div>
-    )
-  }
-
-  if (!state.sidepanel?.showSidepanel) {
-    return null
-  }
-
-  // Show SynchProfile if triggered
-  if (showSynchProfile && state.auth?.isAuthenticated) {
-    return (
-      <div style={{ padding: "1rem" }}>
-        <SynchProfile />
-      </div>
-    )
-  }
-
-  // Show Setting if triggered
-  if (showSetting && state.auth?.isAuthenticated) {
-    return (
-      <div style={{ padding: "1rem" }}>
-        <Setting />
-      </div>
-    )
-  }
-
-  // Show logged-in landing page if authenticated
-  if (state.auth?.isAuthenticated) {
-    return (
-      <div style={{ padding: "1rem" }}>
-        <LandingPageLoggedIn user={state.auth.user} />
-      </div>
-    )
-  }
-
-  // Otherwise, show guest landing page
-  return (
-    <div style={{ padding: "1rem" }}>
-      <LandingPage />
+      ) : !state.sidepanel?.showSidepanel ? null
+        : showSynchProfile && state.auth?.isAuthenticated ? <SynchProfile />
+        : showSetting && state.auth?.isAuthenticated ? <Setting />
+        : showCoverLetterModal ? (
+            <CoverLetterModal onClose={() => setShowCoverLetterModal(false)} />
+          )
+        : state.auth?.isAuthenticated ? <LandingPageLoggedIn user={state.auth.user} />
+        : <LandingPage />
+      }
     </div>
   )
 }

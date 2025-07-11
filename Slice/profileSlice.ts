@@ -178,7 +178,9 @@ const profileSlice = createSlice({
       })
       .addCase(fetchProfileFromSupabase.fulfilled, (state, action) => {
         state.loading = false
+        // Store the full profile object (with all related data)
         state.fetchedProfile = action.payload
+        state.profile = action.payload // Keep this in sync for easy access
       })
       .addCase(fetchProfileFromSupabase.rejected, (state, action) => {
         state.loading = false

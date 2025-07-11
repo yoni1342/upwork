@@ -1,6 +1,7 @@
 import { store } from "./store"
 import { setProfile, sendProfileToSupabase, fetchProfileFromSupabase } from "./Slice/profileSlice"
 import { signInWithEmail, checkCurrentUser, signUpWithEmail, sendResetEmail, signOutUser } from "./Slice/authSlice"
+import { generateCoverLetter } from "./Slice/coverLetterSlice"
 
 // Handle extension icon click to open sidepanel
 if (typeof chrome !== 'undefined' && chrome.action) {
@@ -104,6 +105,38 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         })
       return true // async
     }
+    // Handle GENERATE_COVER_LETTER from UI/modal
+    if (message.type === 'GENERATE_COVER_LETTER') {
+      const { jobDetailsHtml, url, userId, timestamp, userProfile } = message.payload
+      // Console log both before sending to coverLetterSlice
+      console.log('Job details from content.ts:', { jobDetailsHtml, url, timestamp })
+      console.log('User profile from profileslice:', userProfile)
+      store.dispatch(generateCoverLetter({
+        jobDetailsHtml,
+        url,
+        userId,
+        timestamp,
+        userProfile
+      }))
+        .then((result) => {
+          if (result && result.type && result.type.endsWith('/fulfilled')) {
+            if (result.payload && typeof result.payload === 'object' && 'coverLetter' in result.payload) {
+              console.log('n8n success:', result.payload.coverLetter)
+            } else {
+              console.log('n8n success (raw payload):', result.payload)
+            }
+          } else if (result && result.type && result.type.endsWith('/rejected')) {
+            console.error('n8n error:', result.payload)
+          } else {
+            console.log('n8n unknown result:', result)
+          }
+        })
+        .catch((err) => {
+          console.error('n8n dispatch error:', err)
+        })
+      sendResponse({ status: 'Cover letter generation started' })
+      return true
+    }
     // Relay SHOW_LANDING_PAGE to all extension views and open side panel
     if (message.type === 'SHOW_LANDING_PAGE') {
       if (chrome.sidePanel && chrome.sidePanel.open && sender && sender.tab && sender.tab.windowId) {
@@ -159,6 +192,25 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
           sendResponse({ status: 'Profile fetch error', error: err })
         })
       return true // async
+    }
+    // Relay OPEN_COVER_LETTER_MODAL to all extension views and open side panel
+    if (message.type === 'OPEN_COVER_LETTER_MODAL') {
+      if (chrome.sidePanel && chrome.sidePanel.open && sender && sender.tab && sender.tab.windowId) {
+        chrome.sidePanel.open({ windowId: sender.tab.windowId }).then(() => {
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'OPEN_COVER_LETTER_MODAL' })
+          }, 300)
+        })
+      } else {
+        chrome.runtime.sendMessage({ type: 'OPEN_COVER_LETTER_MODAL' })
+      }
+      sendResponse({ status: 'relayed' });
+      return false;
+    }
+    // Log data sent from coverLetterModal in the background console
+    if (message.type === 'LOG_TO_BACKGROUND') {
+      console.log('[From coverLetterModal] Data sent:', message.payload)
+      return false
     }
     // Return true to indicate async response if needed
     return false
