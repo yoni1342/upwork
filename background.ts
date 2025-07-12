@@ -107,34 +107,76 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
     }
     // Handle GENERATE_COVER_LETTER from UI/modal
     if (message.type === 'GENERATE_COVER_LETTER') {
-      const { jobDetailsHtml, url, userId, timestamp, userProfile } = message.payload
-      // Console log both before sending to coverLetterSlice
-      console.log('Job details from content.ts:', { jobDetailsHtml, url, timestamp })
-      console.log('User profile from profileslice:', userProfile)
+      console.log('🎯 [background] GENERATE_COVER_LETTER received:', message.payload)
+      const { jobDetailsHtml, url, userId, timestamp, profile, userProfile, skills, workHistory } = message.payload
+      
+      // Console log the structured payload
+      console.log('📦 [background] Structured payload for n8n:', {
+        jobDetailsHtml: jobDetailsHtml?.substring(0, 100) + '...',
+        url,
+        userId,
+        timestamp,
+        profile,
+        userProfile,
+        skills,
+        workHistory
+      })
+      
       store.dispatch(generateCoverLetter({
         jobDetailsHtml,
         url,
         userId,
         timestamp,
-        userProfile
+        profile,
+        userProfile,
+        skills,
+        workHistory
       }))
         .then((result) => {
+          console.log('📡 [background] generateCoverLetter result:', result)
+          
           if (result && result.type && result.type.endsWith('/fulfilled')) {
             if (result.payload && typeof result.payload === 'object' && 'coverLetter' in result.payload) {
-              console.log('n8n success:', result.payload.coverLetter)
+              console.log('✅ [background] n8n success - cover letter generated:', result.payload.coverLetter)
+              
+              // Send the cover letter back to the modal
+              chrome.runtime.sendMessage({ 
+                type: "COVER_LETTER_GENERATED", 
+                coverLetter: result.payload.coverLetter 
+              })
+              
+              sendResponse({ 
+                status: 'Cover letter generated successfully',
+                coverLetter: result.payload.coverLetter
+              })
             } else {
-              console.log('n8n success (raw payload):', result.payload)
+              console.log('⚠️ [background] n8n success but unexpected payload format:', result.payload)
+              sendResponse({ 
+                status: 'Cover letter generated but with unexpected format',
+                payload: result.payload
+              })
             }
           } else if (result && result.type && result.type.endsWith('/rejected')) {
-            console.error('n8n error:', result.payload)
+            console.error('❌ [background] n8n error:', result.payload)
+            sendResponse({ 
+              status: 'Cover letter generation failed',
+              error: result.payload
+            })
           } else {
-            console.log('n8n unknown result:', result)
+            console.log('❓ [background] n8n unknown result:', result)
+            sendResponse({ 
+              status: 'Unknown result from cover letter generation',
+              result
+            })
           }
         })
         .catch((err) => {
-          console.error('n8n dispatch error:', err)
+          console.error('💥 [background] n8n dispatch error:', err)
+          sendResponse({ 
+            status: 'Cover letter generation error',
+            error: err
+          })
         })
-      sendResponse({ status: 'Cover letter generation started' })
       return true
     }
     // Relay SHOW_LANDING_PAGE to all extension views and open side panel
@@ -207,11 +249,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
       sendResponse({ status: 'relayed' });
       return false;
     }
-    // Log data sent from coverLetterModal in the background console
-    if (message.type === 'LOG_TO_BACKGROUND') {
-      console.log('[From coverLetterModal] Data sent:', message.payload)
-      return false
-    }
+
     // Return true to indicate async response if needed
     return false
   })

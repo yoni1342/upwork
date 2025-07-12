@@ -147,23 +147,34 @@ async function scrapeAndLogProfile() {
 }
 
 function scrapeJobDetails() {
+    console.log('🔍 [content] Starting job details scraping...')
+    
     // Find the exact job details element with the correct heading
     const jobDetailsElement = Array.from(document.querySelectorAll('.air3-card.air3-card-outline.my-6x.py-0')).find(el => {
         const header = el.querySelector('header h2');
         return header && header.textContent.trim() === 'Job details';
     });
 
-    if (!jobDetailsElement) return null;
+    if (!jobDetailsElement) {
+        console.error('❌ [content] Job details element not found')
+        return null;
+    }
+
+    console.log('✅ [content] Job details element found')
 
     // Get the raw HTML string of the element
     const rawHtml = jobDetailsElement.outerHTML;
+    console.log('📄 [content] Raw HTML length:', rawHtml.length)
+    console.log('📄 [content] Raw HTML preview:', rawHtml.substring(0, 200) + '...')
 
-    // Send the raw HTML exactly as it is
-    return {
+    const result = {
         jobDetailsHtml: rawHtml,
         url: window.location.href,
         timestamp: new Date().toISOString()
     };
+    
+    console.log('📦 [content] Job details result:', result)
+    return result;
 }
 
 // Function to handle Generate Cover Letter button click
@@ -231,11 +242,16 @@ if (document.readyState === "loading") {
 
 // Listen for SCRAPE_PROFILE message to trigger scraping
 chrome.runtime?.onMessage?.addListener((msg, sender, sendResponse) => {
+  console.log('📨 [content] Received message:', msg.type)
+  
   if (msg.type === "SCRAPE_PROFILE") {
+    console.log('👤 [content] Scraping profile...')
     scrapeAndLogProfile()
   }
   if (msg.type === "SCRAPE_JOB_DETAILS") {
+    console.log('📋 [content] Scraping job details...')
     const details = scrapeJobDetails();
+    console.log('📋 [content] Job details scraped:', details)
     sendResponse({ details });
   }
   if (msg.type === "shiftPageRight") {
