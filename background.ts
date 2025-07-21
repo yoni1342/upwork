@@ -1,6 +1,7 @@
 import { store } from "./store"
 import { setProfile, sendProfileToSupabase, fetchProfileFromSupabase } from "./Slice/profileSlice"
 import { signInWithEmail, checkCurrentUser, signUpWithEmail, sendResetEmail, signOutUser } from "./Slice/authSlice"
+import { generateCoverLetter } from "./Slice/coverLetterSlice"
 
 // Handle extension icon click to open sidepanel
 if (typeof chrome !== 'undefined' && chrome.action) {
@@ -104,6 +105,80 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         })
       return true // async
     }
+    // Handle GENERATE_COVER_LETTER from UI/modal
+    if (message.type === 'GENERATE_COVER_LETTER') {
+      console.log('🎯 [background] GENERATE_COVER_LETTER received:', message.payload)
+      const { jobDetailsHtml, url, userId, timestamp, profile, userProfile, skills, workHistory } = message.payload
+      
+      // Console log the structured payload
+      console.log('📦 [background] Structured payload for n8n:', {
+        jobDetailsHtml: jobDetailsHtml?.substring(0, 100) + '...',
+        url,
+        userId,
+        timestamp,
+        profile,
+        userProfile,
+        skills,
+        workHistory
+      })
+      
+      store.dispatch(generateCoverLetter({
+        jobDetailsHtml,
+        url,
+        userId,
+        timestamp,
+        profile,
+        userProfile,
+        skills,
+        workHistory
+      }))
+        .then((result) => {
+          console.log('📡 [background] generateCoverLetter result:', result)
+          
+          if (result && result.type && result.type.endsWith('/fulfilled')) {
+            if (result.payload && typeof result.payload === 'object' && 'coverLetter' in result.payload) {
+              console.log('✅ [background] n8n success - cover letter generated:', result.payload.coverLetter)
+              
+              // Send the cover letter back to the modal
+              chrome.runtime.sendMessage({ 
+                type: "COVER_LETTER_GENERATED", 
+                coverLetter: result.payload.coverLetter 
+              })
+              
+              sendResponse({ 
+                status: 'Cover letter generated successfully',
+                coverLetter: result.payload.coverLetter
+              })
+            } else {
+              console.log('⚠️ [background] n8n success but unexpected payload format:', result.payload)
+              sendResponse({ 
+                status: 'Cover letter generated but with unexpected format',
+                payload: result.payload
+              })
+            }
+          } else if (result && result.type && result.type.endsWith('/rejected')) {
+            console.error('❌ [background] n8n error:', result.payload)
+            sendResponse({ 
+              status: 'Cover letter generation failed',
+              error: result.payload
+            })
+          } else {
+            console.log('❓ [background] n8n unknown result:', result)
+            sendResponse({ 
+              status: 'Unknown result from cover letter generation',
+              result
+            })
+          }
+        })
+        .catch((err) => {
+          console.error('💥 [background] n8n dispatch error:', err)
+          sendResponse({ 
+            status: 'Cover letter generation error',
+            error: err
+          })
+        })
+      return true
+    }
     // Relay SHOW_LANDING_PAGE to all extension views and open side panel
     if (message.type === 'SHOW_LANDING_PAGE') {
       if (chrome.sidePanel && chrome.sidePanel.open && sender && sender.tab && sender.tab.windowId) {
@@ -160,6 +235,21 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         })
       return true // async
     }
+    // Relay OPEN_COVER_LETTER_MODAL to all extension views and open side panel
+    if (message.type === 'OPEN_COVER_LETTER_MODAL') {
+      if (chrome.sidePanel && chrome.sidePanel.open && sender && sender.tab && sender.tab.windowId) {
+        chrome.sidePanel.open({ windowId: sender.tab.windowId }).then(() => {
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'OPEN_COVER_LETTER_MODAL' })
+          }, 300)
+        })
+      } else {
+        chrome.runtime.sendMessage({ type: 'OPEN_COVER_LETTER_MODAL' })
+      }
+      sendResponse({ status: 'relayed' });
+      return false;
+    }
+
     // Return true to indicate async response if needed
     return false
   })
